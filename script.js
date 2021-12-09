@@ -1,43 +1,64 @@
-let taskArr = JSON.parse(localStorage.getItem("tasks")) || []; //Массив всех тасков
-let taskText = ""; //Текст введённый в поле input
+let taskArr = JSON.parse(localStorage.getItem("tasks")) || [];
+let taskText = "";
 let input = null;
 
-//Срабатывает после загрузки окна
-window.onload = function init() {
+window.onload = async function init() {
   input = document.getElementById("task-text");
-
-  //Срабатывает при изменении input (если нажать enter или убрать фокус)
   input.addEventListener("change", updateValue);
+  const resp = await fetch("http://localhost:8000/allTasks", {
+    method: "GET",
+  });
 
+  let result = await resp.json();
+  taskArr = result.data;
   render();
 };
 
-//Нажатие на кнопку Add
-//Задача которая хранилась в taskText добавляется в raskArr
-//после чего поля обнуляются и вызывается функция render
-const onClickButton = () => {
+const onClickButton = async () => {
   taskArr.push({
     text: taskText,
     isCheck: false,
   });
 
+  const resp = await fetch("http://localhost:8000/createTask", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+    },
+    body: JSON.stringify({
+      text: taskText,
+      isCheck: false,
+    }),
+  });
+
+  let result = await resp.json();
+  taskArr = result.data;
   localStorage.setItem("tasks", JSON.stringify(taskArr));
   taskText = "";
   input.value = "";
   render();
 };
 
-const onClickDelete = (index) => {
-  taskArr.splice(index, 1);
+const onClickDelete = async (index) => {
+  const resp = await fetch(`http://localhost:8000/deleteTask?id=${index}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+  let result = await resp.json();
+  taskArr = result.data;
   localStorage.setItem("tasks", JSON.stringify(taskArr));
   render();
 };
 
-const onClickEdit = (index) => {
+const onClickEdit = async (index) => {
   const task = taskArr[index];
   let editText = task.text;
 
-  const container = document.getElementById(`task=${index}`);
+  const container = document.getElementById(`task=${task.id}`);
   while (container.firstChild) {
     container.removeChild(container.firstChild);
   }
@@ -52,8 +73,23 @@ const onClickEdit = (index) => {
   const editButton = document.createElement("button");
   editButton.innerText = "Edit";
 
-  editButton.onclick = () => {
-    taskArr[index].text = editText;
+  editButton.onclick = async () => {
+    const resp = await fetch(`http://localhost:8000/updateTask`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        id: task.id,
+        text: editText,
+        isCheck: false,
+      }),
+    });
+
+    let result = await resp.json();
+    taskArr = result.data;
+
     localStorage.setItem("tasks", JSON.stringify(taskArr));
     render();
   };
@@ -71,12 +107,10 @@ const onClickEdit = (index) => {
   console.log(container);
 };
 
-//Записывает данные из input в taskText
 const updateValue = (Event) => {
   taskText = Event.target.value;
 };
 
-//Отрисовка блоков с тасками
 const render = () => {
   const content = document.getElementById("content-page");
 
@@ -99,7 +133,7 @@ const render = () => {
 
   taskArr.map((item, index) => {
     const container = document.createElement("div");
-    container.id = `task=${index}`;
+    container.id = `task=${item.id}`;
 
     const checkbox = document.createElement("input");
     const text = document.createElement("p");
@@ -131,7 +165,7 @@ const render = () => {
       "https://img.icons8.com/material-outlined/24/000000/delete-sign.png";
 
     imageDelete.onclick = () => {
-      onClickDelete(index);
+      onClickDelete(item.id);
     };
 
     container.appendChild(imageDelete);
@@ -140,9 +174,23 @@ const render = () => {
   });
 };
 
-//Нажатие на checkbox
-onChangeCheckbox = (index) => {
-  taskArr[index].isCheck = !taskArr[index].isCheck;
+const onChangeCheckbox = async (index) => {
+  task = taskArr[index];
+  const resp = await fetch(`http://localhost:8000/updateTask`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+    },
+    body: JSON.stringify({
+      id: task.id,
+      text: task.text,
+      isCheck: !task.isCheck,
+    }),
+  });
+  let result = await resp.json();
+  taskArr = result.data;
+  //taskArr[index].isCheck = !taskArr[index].isCheck;
   localStorage.setItem("tasks", JSON.stringify(taskArr));
   render();
 };
