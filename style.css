@@ -1,0 +1,38 @@
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(240, 240, 240, 0.576);
+}
+
+.blocks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-block {
+  margin-top: 20px;
+  border-radius: 5px;
+  padding: 10px;
+  max-width: 400px;
+  background-color: white;
+  box-shadow: 0px 0px 10px rgb(184, 184, 184);
+  word-wrap: break-word;
+}
+
+.done-task {
+  background-color: rgba(240, 240, 240, 0.576);
+  color: rgba(0, 0, 0, 0.234);
+  box-shadow: none;
+}
+
+.task-block p {
+  border-bottom: 1px solid;
+  height: 90%;
+  margin: 0px;
+  margin-bottom: 5px;
+  max-width: 390px;
+}
