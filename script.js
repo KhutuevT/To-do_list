@@ -1,43 +1,30 @@
-let taskArr = JSON.parse(localStorage.getItem("tasks")) || [];
+let taskArr = [];
 let taskText = "";
 let input = null;
 
-window.onload = async function init() {
+window.onload = async () => {
   input = document.getElementById("task-text");
   input.addEventListener("change", updateValue);
-  const resp = await fetch("http://localhost:8000/allTasks", {
-    method: "GET",
-  });
-
-  let result = await resp.json();
-  taskArr = result.data;
   render();
 };
 
 const onClickButton = async () => {
-  taskArr.push({
-    text: taskText,
-    isCheck: false,
-  });
-
-  const resp = await fetch("http://localhost:8000/createTask", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*",
-    },
-    body: JSON.stringify({
-      text: taskText,
-      isCheck: false,
-    }),
-  });
-
-  let result = await resp.json();
-  taskArr = result.data;
-  localStorage.setItem("tasks", JSON.stringify(taskArr));
-  taskText = "";
-  input.value = "";
-  render();
+  if (taskText != "") {
+    const resp = await fetch("http://localhost:8000/createTask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        text: taskText,
+        isCheck: false,
+      }),
+    });
+    taskText = "";
+    input.value = "";
+    render();
+  } else alert("Empty field");
 };
 
 const onClickDelete = async (index) => {
@@ -48,17 +35,16 @@ const onClickDelete = async (index) => {
       "Access-Control-Allow-Origin": "*",
     },
   });
-  let result = await resp.json();
-  taskArr = result.data;
-  localStorage.setItem("tasks", JSON.stringify(taskArr));
+
   render();
 };
 
 const onClickEdit = async (index) => {
   const task = taskArr[index];
-  let editText = task.text;
+  const { _id, text } = task;
+  let editText = text;
 
-  const container = document.getElementById(`task=${task.id}`);
+  const container = document.getElementById(`task=${_id}`);
   while (container.firstChild) {
     container.removeChild(container.firstChild);
   }
@@ -81,16 +67,12 @@ const onClickEdit = async (index) => {
         "Access-Control-Allow-Origin": "*",
       },
       body: JSON.stringify({
-        id: task.id,
+        id: _id,
         text: editText,
         isCheck: false,
       }),
     });
 
-    let result = await resp.json();
-    taskArr = result.data;
-
-    localStorage.setItem("tasks", JSON.stringify(taskArr));
     render();
   };
 
@@ -104,14 +86,20 @@ const onClickEdit = async (index) => {
   container.appendChild(input);
   container.appendChild(editButton);
   container.appendChild(cancelButton);
-  console.log(container);
 };
 
 const updateValue = (Event) => {
   taskText = Event.target.value;
 };
 
-const render = () => {
+const render = async () => {
+  const resp = await fetch("http://localhost:8000/allTasks", {
+    method: "GET",
+  });
+
+  const result = await resp.json();
+  taskArr = result.data;
+
   const content = document.getElementById("content-page");
 
   //delite all child elements
@@ -132,21 +120,23 @@ const render = () => {
   });
 
   taskArr.map((item, index) => {
+    const { _id, text, isCheck } = item;
+    console.log(_id, text, isCheck);
     const container = document.createElement("div");
-    container.id = `task=${item.id}`;
+    container.id = `task=${_id}`;
 
     const checkbox = document.createElement("input");
-    const text = document.createElement("p");
-    text.innerText = item.text;
-    container.appendChild(text);
+    const textBlock = document.createElement("p");
+    textBlock.innerText = item.text;
+    container.appendChild(textBlock);
     checkbox.type = "checkbox";
-    checkbox.checked = item.isCheck;
+    checkbox.checked = isCheck;
 
     checkbox.onchange = () => {
       onChangeCheckbox(index);
     };
 
-    container.className = item.isCheck ? "task-block done-task" : "task-block";
+    container.className = isCheck ? "task-block done-task" : "task-block";
 
     container.appendChild(checkbox);
 
@@ -158,14 +148,14 @@ const render = () => {
       onClickEdit(index);
     };
 
-    if (!item.isCheck) container.appendChild(imageEdit);
+    if (!isCheck) container.appendChild(imageEdit);
 
     const imageDelete = document.createElement("img");
     imageDelete.src =
       "https://img.icons8.com/material-outlined/24/000000/delete-sign.png";
 
     imageDelete.onclick = () => {
-      onClickDelete(item.id);
+      onClickDelete(_id);
     };
 
     container.appendChild(imageDelete);
@@ -175,7 +165,8 @@ const render = () => {
 };
 
 const onChangeCheckbox = async (index) => {
-  task = taskArr[index];
+  const task = taskArr[index];
+  const { _id, text } = task;
   const resp = await fetch(`http://localhost:8000/updateTask`, {
     method: "PATCH",
     headers: {
@@ -183,14 +174,10 @@ const onChangeCheckbox = async (index) => {
       "Access-Control-Allow-Origin": "*",
     },
     body: JSON.stringify({
-      id: task.id,
-      text: task.text,
+      id: _id,
+      text: text,
       isCheck: !task.isCheck,
     }),
   });
-  let result = await resp.json();
-  taskArr = result.data;
-  //taskArr[index].isCheck = !taskArr[index].isCheck;
-  localStorage.setItem("tasks", JSON.stringify(taskArr));
   render();
 };
