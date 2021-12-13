@@ -121,13 +121,12 @@ const render = async () => {
 
   taskArr.map((item, index) => {
     const { _id, text, isCheck } = item;
-    console.log(_id, text, isCheck);
     const container = document.createElement("div");
     container.id = `task=${_id}`;
 
     const checkbox = document.createElement("input");
     const textBlock = document.createElement("p");
-    textBlock.innerText = item.text;
+    textBlock.innerText = text;
     container.appendChild(textBlock);
     checkbox.type = "checkbox";
     checkbox.checked = isCheck;
@@ -175,7 +174,7 @@ const onChangeCheckbox = async (index) => {
     },
     body: JSON.stringify({
       id: _id,
-      text: text,
+      text,
       isCheck: !task.isCheck,
     }),
   });
