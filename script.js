@@ -1,43 +1,50 @@
-let taskArr = JSON.parse(localStorage.getItem("tasks")) || []; //Массив всех тасков
-let taskText = ""; //Текст введённый в поле input
+let taskArr = [];
+let taskText = "";
 let input = null;
 
-//Срабатывает после загрузки окна
-window.onload = function init() {
+window.onload = async () => {
   input = document.getElementById("task-text");
-
-  //Срабатывает при изменении input (если нажать enter или убрать фокус)
   input.addEventListener("change", updateValue);
-
   render();
 };
 
-//Нажатие на кнопку Add
-//Задача которая хранилась в taskText добавляется в raskArr
-//после чего поля обнуляются и вызывается функция render
-const onClickButton = () => {
-  taskArr.push({
-    text: taskText,
-    isCheck: false,
+const onClickButton = async () => {
+  if (taskText != "") {
+    const resp = await fetch("http://localhost:8000/createTask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        text: taskText,
+        isCheck: false,
+      }),
+    });
+    taskText = "";
+    input.value = "";
+    render();
+  } else alert("Empty field");
+};
+
+const onClickDelete = async (index) => {
+  const resp = await fetch(`http://localhost:8000/deleteTask?id=${index}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+    },
   });
 
-  localStorage.setItem("tasks", JSON.stringify(taskArr));
-  taskText = "";
-  input.value = "";
   render();
 };
 
-const onClickDelete = (index) => {
-  taskArr.splice(index, 1);
-  localStorage.setItem("tasks", JSON.stringify(taskArr));
-  render();
-};
-
-const onClickEdit = (index) => {
+const onClickEdit = async (index) => {
   const task = taskArr[index];
-  let editText = task.text;
+  const { _id, text } = task;
+  let editText = text;
 
-  const container = document.getElementById(`task=${index}`);
+  const container = document.getElementById(`task=${_id}`);
   while (container.firstChild) {
     container.removeChild(container.firstChild);
   }
@@ -52,9 +59,20 @@ const onClickEdit = (index) => {
   const editButton = document.createElement("button");
   editButton.innerText = "Edit";
 
-  editButton.onclick = () => {
-    taskArr[index].text = editText;
-    localStorage.setItem("tasks", JSON.stringify(taskArr));
+  editButton.onclick = async () => {
+    const resp = await fetch(`http://localhost:8000/updateTask`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({
+        id: _id,
+        text: editText,
+        isCheck: false,
+      }),
+    });
+
     render();
   };
 
@@ -68,16 +86,20 @@ const onClickEdit = (index) => {
   container.appendChild(input);
   container.appendChild(editButton);
   container.appendChild(cancelButton);
-  console.log(container);
 };
 
-//Записывает данные из input в taskText
 const updateValue = (Event) => {
   taskText = Event.target.value;
 };
 
-//Отрисовка блоков с тасками
-const render = () => {
+const render = async () => {
+  const resp = await fetch("http://localhost:8000/allTasks", {
+    method: "GET",
+  });
+
+  const result = await resp.json();
+  taskArr = result.data;
+
   const content = document.getElementById("content-page");
 
   //delite all child elements
@@ -98,21 +120,22 @@ const render = () => {
   });
 
   taskArr.map((item, index) => {
+    const { _id, text, isCheck } = item;
     const container = document.createElement("div");
-    container.id = `task=${index}`;
+    container.id = `task=${_id}`;
 
     const checkbox = document.createElement("input");
-    const text = document.createElement("p");
-    text.innerText = item.text;
-    container.appendChild(text);
+    const textBlock = document.createElement("p");
+    textBlock.innerText = text;
+    container.appendChild(textBlock);
     checkbox.type = "checkbox";
-    checkbox.checked = item.isCheck;
+    checkbox.checked = isCheck;
 
     checkbox.onchange = () => {
       onChangeCheckbox(index);
     };
 
-    container.className = item.isCheck ? "task-block done-task" : "task-block";
+    container.className = isCheck ? "task-block done-task" : "task-block";
 
     container.appendChild(checkbox);
 
@@ -124,14 +147,14 @@ const render = () => {
       onClickEdit(index);
     };
 
-    if (!item.isCheck) container.appendChild(imageEdit);
+    if (!isCheck) container.appendChild(imageEdit);
 
     const imageDelete = document.createElement("img");
     imageDelete.src =
       "https://img.icons8.com/material-outlined/24/000000/delete-sign.png";
 
     imageDelete.onclick = () => {
-      onClickDelete(index);
+      onClickDelete(_id);
     };
 
     container.appendChild(imageDelete);
@@ -140,9 +163,20 @@ const render = () => {
   });
 };
 
-//Нажатие на checkbox
-onChangeCheckbox = (index) => {
-  taskArr[index].isCheck = !taskArr[index].isCheck;
-  localStorage.setItem("tasks", JSON.stringify(taskArr));
+const onChangeCheckbox = async (index) => {
+  const task = taskArr[index];
+  const { _id, text } = task;
+  const resp = await fetch(`http://localhost:8000/updateTask`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+    },
+    body: JSON.stringify({
+      id: _id,
+      text,
+      isCheck: !task.isCheck,
+    }),
+  });
   render();
 };
